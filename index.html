@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase Photo Gallery</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-size: cover;
+            transition: background 1s ease-in-out;
+        }
+
+        h1 {
+            color: white;
+        }
+
+        #gallery {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #gallery img {
+            width: 200px;
+            height: 200px;
+            margin: 10px;
+            object-fit: cover;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Supabase Photo Gallery</h1>
+    
+    <div id="gallery"></div> <!-- This is where the photos will appear -->
+    
+    <button id="uploadButton">Upload Photo</button>
+    <input type="file" id="fileInput" style="display: none;">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <script>
+        // Initialize Supabase
+        const supabaseUrl = 'https://mbranrgqguzahmqtnequ.supabase.co';  // Your Supabase URL
+        const supabaseKey = 'YOUR_ANON_KEY';  // Your Supabase anon key
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Function to fetch photos from Supabase Storage
+        async function fetchPhotos() {
+            const { data, error } = await supabase
+                .storage
+                .from('photos')  // Name of your storage bucket
+                .list('', {
+                    limit: 100,  // Adjust the limit to load more photos
+                    offset: 0
+                });
+
+            if (error) {
+                console.error('Error fetching photos:', error.message);
+                return;
+            }
+
+            const gallery = document.getElementById('gallery');
+            gallery.innerHTML = '';  // Clear existing images
+
+            data.forEach(file => {
+                const imgElement = document.createElement('img');
+                const fileUrl = `${supabaseUrl}/storage/v1/object/public/photos/${file.name}`;  // Construct file URL
+                imgElement.src = fileUrl;
+                imgElement.alt = file.name;
+                imgElement.addEventListener('click', () => {
+                    // Allow users to download images by clicking
+                    const a = document.createElement('a');
+                    a.href = fileUrl;
+                    a.download = file.name;
+                    a.click();
+                });
+                gallery.appendChild(imgElement);
+            });
+        }
+
+        // Upload a photo to Supabase
+        document.getElementById('uploadButton').addEventListener('click', () => {
+            document.getElementById('fileInput').click();
+        });
+
+        document.getElementById('fileInput').addEventListener('change', async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const { data, error } = await supabase
+                .storage
+                .from('photos')
+                .upload(file.name, file);
+
+            if (error) {
+                console.error('Error uploading file:', error.message);
+                return;
+            }
+
+            console.log('File uploaded successfully:', data);
+            fetchPhotos();  // Reload photos after upload
+        });
+
+        // Call fetchPhotos on page load to display photos
+        fetchPhotos();
+
+        // Function to change the background every 10 seconds
+        let backgroundImages = [
+            'https://via.placeholder.com/1920x1080.png?text=Background+1',
+            'https://via.placeholder.com/1920x1080.png?text=Background+2',
+            'https://via.placeholder.com/1920x1080.png?text=Background+3'
+        ];
+
+        let currentIndex = 0;
+        setInterval(() => {
+            document.body.style.backgroundImage = `url(${backgroundImages[currentIndex]})`;
+            currentIndex = (currentIndex + 1) % backgroundImages.length;  // Loop through the images
+        }, 10000);  // Change background every 10 seconds
+    </script>
+</body>
+  </html>
